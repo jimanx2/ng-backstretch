@@ -76,7 +76,9 @@ directive('backstretch', ['$window', '$timeout', function($window, $timeout) {
           return false;
         }
         scope._images.forEach(function(element, index, array){
-          scope.image = angular.element('<div>');
+          if(!element) return;
+
+          scope.image = angular.element('<div class="img">');
           scope.image.css(styles.image);
           scope.image.css('background-image', 'url(' + (imageUrl = element) + ')')
 
@@ -157,7 +159,10 @@ directive('backstretch', ['$window', '$timeout', function($window, $timeout) {
         }
 
         // show the image since it's finished loading
-        scope.image.css({opacity:1});
+        scope.image.removeClass('animated');
+        void element.offsetWidth;
+        scope.image.addClass('animated');
+        scope.image.css({opacity:1})
 
         // hide it once the duration has been reached
         $timeout(function(){
@@ -178,7 +183,7 @@ directive('backstretch', ['$window', '$timeout', function($window, $timeout) {
         if(!images) return
         if(!images[0]) return
 
-        scope._images = Array.isArray(scope.images()) ? scope.images() : [scope.images()]
+        scope._images = Array.isArray(images) ? images : [images]
         if(!scope.started) scope.load()
       })
 
