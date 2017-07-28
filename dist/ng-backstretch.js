@@ -21,14 +21,8 @@ directive('backstretch', ['$window', '$timeout', function($window, $timeout) {
        * e.g. <div backstretch backstretch-url="'/path/to/image.jpg'">
        * So, we need to turn this back into an array.
        */
-      scope.images = Array.isArray(scope.images()) ? scope.images() : [scope.images()];
       scope.duration = scope.duration() || 5000;
       scope.fade = scope.fade() || 0;
-
-      // We need at least one image or method name
-      if (scope.images.length === 0) {
-        return false;
-      }
 
       /* STYLES
        * 
@@ -53,9 +47,10 @@ directive('backstretch', ['$window', '$timeout', function($window, $timeout) {
           opacity: 0,
           margin: 0,
           padding: 0,
+          backgroundSize: 'cover',
           border: 'none',
-          width: 'auto',
-          height: 'auto',
+          width: '100%',
+          height: '100%',
           maxHeight: 'none',
           maxWidth: 'none',
           zIndex: -999999,
@@ -67,22 +62,28 @@ directive('backstretch', ['$window', '$timeout', function($window, $timeout) {
       scope.wrapper = angular.element('<div class="backstretch"></div>');
       scope.wrapper.css(styles.wrapper);
 
-      scope.images.forEach(function(element, index, array){
-        scope.image = angular.element('<img>');
-        scope.image[0].src = element;
-        scope.image.css(styles.image);
-
-        // append these images to the wrapper
-        scope.wrapper.append(scope.image);
-      });
-
       // append the wrapper
       element.append(scope.wrapper);
 
       // Set the first image
       scope.index = 0;
+      scope.started = false;
 
-      scope.load = function(e) {          
+      scope.load = function(e) {  
+        var imageUrl;
+        // We need at least one image or method name
+        if (scope._images.length === 0) {
+          return false;
+        }
+        scope._images.forEach(function(element, index, array){
+          scope.image = angular.element('<div>');
+          scope.image.css(styles.image);
+          scope.image.css('background-image', 'url(' + (imageUrl = element) + ')')
+
+          // append these images to the wrapper
+          scope.wrapper.append(scope.image);
+        });
+
         // figure out what the width:height ratio is
         scope.ratio = this.width / this.height;
 
@@ -90,7 +91,12 @@ directive('backstretch', ['$window', '$timeout', function($window, $timeout) {
         scope.resize();
 
         // display the first image
-        scope.show(scope.index++);
+
+        angular.element("<img>").attr('src', imageUrl).on('load', function(){
+          scope.show(scope.index++);
+        })
+        
+        if(!scope.started) scope.started = true;
       };
 
       scope.resize = function(e) {
@@ -140,13 +146,13 @@ directive('backstretch', ['$window', '$timeout', function($window, $timeout) {
         scope.image = angular.element(element);
 
         // only one image
-        if (scope.images.length === 1) {
+        if (scope._images.length === 1) {
           scope.image.css({opacity:1});
           return;
         }
 
         // bring things back around once we've hit the end
-        if (index >= scope.images.length-1) {
+        if (index >= scope._images.length-1) {
           scope.index = 0;
         }
 
@@ -164,7 +170,17 @@ directive('backstretch', ['$window', '$timeout', function($window, $timeout) {
       };
 
       // don't do anything until the image has finished loading
-      scope.image.bind('load', scope.load);
+      // scope.image.bind('load', scope.load);
+
+      scope.$watch(function(){
+        return scope.images()
+      }, function(images){
+        if(!images) return
+        if(!images[0]) return
+
+        scope._images = Array.isArray(scope.images()) ? scope.images() : [scope.images()]
+        if(!scope.started) scope.load()
+      })
 
       // make sure to update the image sizes when the page scales/changes
       angular.element($window).bind('resize', scope.resize);
